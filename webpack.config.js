@@ -2,19 +2,19 @@ module.exports = {
    entry: './src/main.js',
    output: {
        path: './dist',
-       filename: 'request.js'
+       filename: 'request.min.js'
    },
    externals: {
     'jquery': 'window.jquery'
    },
    module: {
-    preLoaders: [
-      {
-        test: /\.js$/,
-        loader: 'eslint',
-        include: /src/
-      }
-    ],
+    // preLoaders: [
+    //   {
+    //     test: /\.js$/,
+    //     loader: 'eslint',
+    //     include: /src/
+    //   }
+    // ],
     loaders: [
       {
         test: /\.js$/,
