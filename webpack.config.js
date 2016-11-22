@@ -4,6 +4,9 @@ module.exports = {
        path: './dist',
        filename: 'request.js'
    },
+   externals: {
+    'jquery': 'window.jquery'
+   },
    module: {
     preLoaders: [
       {
