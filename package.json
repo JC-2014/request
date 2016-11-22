@@ -1,8 +1,8 @@
 {
   "name": "request-cache-js",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "request js on jquery (with local cache function)",
-  "main": "request.js",
+  "main": "request.min.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "webpack-dev-server --devtool eval-source-map --progress --colors --hot --inline --content-base",
