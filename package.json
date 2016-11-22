@@ -1,6 +1,6 @@
 {
   "name": "request-cache-js",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "request js on jquery (with local cache function)",
   "main": "request.js",
   "scripts": {
