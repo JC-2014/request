@@ -1,5 +1,5 @@
 {
-  "name": "request-js",
+  "name": "request-cache-js",
   "version": "0.0.1",
   "description": "request js on jquery (with local cache function)",
   "main": "request.js",
@@ -24,9 +24,7 @@
     "url": "https://github.com/JC-2014/request/issues"
   },
   "homepage": "https://github.com/JC-2014/request#readme",
-  "dependencies": {
-    "jquery": "^3.1.1"
-  },
+  "dependencies": {},
   "devDependencies": {
     "babel": "^6.5.2",
     "babel-core": "^6.18.2",
