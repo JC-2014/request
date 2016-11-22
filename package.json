@@ -1,0 +1,25 @@
+{
+  "name": "request",
+  "version": "0.0.1",
+  "description": "request js on jquery (with local cache function)",
+  "main": "request.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JC-2014/request.git"
+  },
+  "keywords": [
+    "request",
+    "ajax",
+    "cache",
+    "jquery"
+  ],
+  "author": "jc",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/JC-2014/request/issues"
+  },
+  "homepage": "https://github.com/JC-2014/request#readme"
+}
