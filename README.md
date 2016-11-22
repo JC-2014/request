@@ -1,2 +1,3 @@
-# cacheRequest
-a cache request js on jquery 
+# request
+request js on jquery (with local cache function)
+
