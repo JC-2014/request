@@ -2,8 +2,6 @@ import util from './util'
 
 let localCache = {}
 
-let $ = window.jQuery || null
-
 let RqStatus = {
   PENDING: 'pending',
   LOADING: 'loading',
@@ -11,6 +9,11 @@ let RqStatus = {
   ERROR: 'error',
   FAIL: 'fail'
 }
+
+let $ = window.jQuery || null
+let failAlert = window.alert || null
+let errorAlert = window.alert || null
+let defaultMsg = '操作失败，请稍后重试。'
 
 function request ( url, query, options = {} ) {
   let deferred = $.Deferred()
@@ -43,7 +46,10 @@ function request ( url, query, options = {} ) {
 }
 
 request.install = ( options = {} ) => {
-  $ = options.jQuery || window.jQuery
+  $ = options.jQuery
+  failAlert = options.failAlert
+  errorAlert = options.errorAlert
+  defaultMsg = options.defaultMsg
 }
 
 function getLocalCacheByUrl ( url, query ) {
@@ -126,29 +132,27 @@ function extendOpts ( url, data, options, deferred, needCache, cacheData ) {
 }
 
 function ajaxSuccCb ( deferred, res, status, xhr, needCache, cacheData ) {
-  const errorMsg = '操作失败，请稍后重试。'
-
   if ( !util.isObject( res ) ) return console.log( errorMsg )
 
   let resData = null
   let requestStatus = null
 
   if ( res.code === 200 ) {
-    deferred.resolveWith( xhr, [ res.result, res ] )
-
     resData = res.result
     requestStatus = RqStatus.SUCCESS
 
-    // 成功才记录时间
+    // 记录缓存开始时间
     cacheData.date = new Date()
+
+    deferred.resolveWith( xhr, [ resData, res ] )
   } else {
     let msg = res.msg || errorMsg
-    console.log( msg )
-
-    deferred.rejectWith( xhr, [ res ] )
+    errorAlert( msg )
 
     resData = msg
     requestStatus = RqStatus.ERROR
+
+    deferred.rejectWith( xhr, [ res ] )
   }
 
   if ( needCache ) {
@@ -161,6 +165,7 @@ function ajaxSuccCb ( deferred, res, status, xhr, needCache, cacheData ) {
 function ajaxFailCb ( deferred, url, xhr, needCache, cacheData ) {
   let msg = '请求' + url + '失败: ' + xhr.responseText
   console.error( msg )
+  failAlert( msg )
 
   deferred.rejectWith( xhr )
 
