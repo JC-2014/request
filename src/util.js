@@ -1,41 +1,41 @@
-function isObject (o) {
-  return Object.prototype.toString.call(o) === '[object Object]'
+function isObject ( o ) {
+  return Object.prototype.toString.call( o ) === '[object Object]'
 }
 
-function deepEquals (a, b) {
-  let keys = Object.keys
+function deepEquals ( a, b ) {
+  let { is, keys } = Object
   let isArray = Array.isArray
 
-  let allAreArray = Array.isArray(a) && Array.isArray(b)
-  let allAreObject = isObject(a) && isObject(b)
+  let allAreArray = isArray( a ) && isArray( b )
+  let allAreObject = isObject( a ) && isObject( b )
 
-  if (!allAreArray && !allAreObject) {
-    return Object.is(a, b)
+  if ( !allAreArray && !allAreObject ) {
+    return is( a, b )
   }
 
   // array
-  if (allAreArray) {
+  if ( allAreArray ) {
     // sort
     a.sort()
     b.sort()
 
     let aArrLen = a.length
-    if (aArrLen !== b.length) return false
+    if ( aArrLen !== b.length ) return false
 
-    while (aArrLen--) {
-      if (!deepEquals(a[aArrLen], b[aArrLen])) return false
+    while ( aArrLen-- ) {
+      if ( !deepEquals( a[ aArrLen ], b[ aArrLen ] ) ) return false
     }
   }
 
   // object
-  if (allAreObject) {
-    let aKeys = keys(a)
+  if ( allAreObject ) {
+    let aKeys = keys( a )
     let aKeysLen = aKeys.length
-    if (aKeysLen !== keys(b).length) return false
+    if ( aKeysLen !== keys( b ).length ) return false
 
-    while (aKeysLen--) {
-      let key = aKeys[aKeysLen]
-      if (!(b.hasOwnProperty(key) && deepEquals(a[key], b[key]))) return false
+    while ( aKeysLen-- ) {
+      let key = aKeys[ aKeysLen ]
+      if ( !( b.hasOwnProperty( key ) && deepEquals( a[ key ], b[ key ] ) ) ) return false
     }
   }
 

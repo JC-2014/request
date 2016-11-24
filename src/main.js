@@ -1,168 +1,174 @@
-import $ from 'jquery'
-import { deepEquals, isObject } from 'util'
+import util from './util'
 
-(function (factory) {
-  if (typeof exports === 'object') {
-    // Node/CommonJS
-    module.exports = factory()
-  } else if (typeof define === 'function' && define.amd) {
-    // AMD
-    define(factory)
-  } else {
-    // Browser globals
-    let _global
+let localCache = {}
 
-    try {
-      _global = window
-    } catch (e) {
-      _global = self
+let $ = window.jQuery || null
+
+let RqStatus = {
+  PENDING: 'pending',
+  LOADING: 'loading',
+  SUCCESS: 'success',
+  ERROR: 'error',
+  FAIL: 'fail'
+}
+
+function request ( url, query, options = {} ) {
+  let deferred = $.Deferred()
+
+  let { needCache = false , cacheTime = null } = options
+
+  delete options.cacheData
+  delete options.cacheTime
+
+  let cacheData = {}
+
+  if ( needCache ) {
+    cacheData = getLocalCacheByUrl( url, query )
+
+    if ( cacheTime ) {
+      cacheData = resetStatusByCompareCacheTime( cacheData, cacheTime )
     }
 
-    _global.Request = factory()
+    if ( cacheData.status === RqStatus.PENDING ) {
+      cacheData.status = RqStatus.LOADING
+      cacheData.deferred = deferred
+    } else {
+      return cacheStatusHandler( cacheData, deferred )
+    }
   }
-}(function () {
 
-  'use strict'
+  $.ajax( extendOpts( url, query, options, deferred, needCache, cacheData ) )
 
-  let localCache = {}
+  return deferred
+}
 
-  function request (url, query, options) {
-    let deferred = $.Deferred()
+request.install = ( options = {} ) => {
+  $ = options.jQuery || window.jQuery
+}
 
-    let needCache = options.cacheData === true
-    delete options.cacheData
+function getLocalCacheByUrl ( url, query ) {
+  let cacheData = localCache[ url ]
 
-    let cacheData = {}
-    if (needCache) {
-      cacheData = getLocalCacheByUrl(url, query)
+  if ( cacheData && Array.isArray( cacheData ) ) {
+    let match = cacheData.filter(cache => {
+      return util.deepEquals( cache.query, query )
+    })
 
-      if (cacheData.status === 'pending') {
-        cacheData.status = 'loading'
-        cacheData.deferred = deferred
-      } else {
-        return cacheStatusHandler(cacheData, deferred)
-      }
-    }
+    return match.length ? match[ 0 ] : addNewCacheAndReturn( cacheData, query )
+  } else {
+    cacheData = localCache[url] = []
+    return addNewCacheAndReturn( cacheData, query )
+  }
+}
 
-    $.ajax(extendOpts(url, query, options, deferred, needCache, cacheData))
+function resetStatusByCompareCacheTime ( cacheData, cacheTime ) {
+  let date = cacheData.date
 
+  if ( !date ) return cacheData
+
+  // 分钟数
+  let interval = parseInt((new Date() - date) / 1000) / 60
+
+  if ( interval >= cacheTime ) {
+    cacheData.date = null
+    cacheData.status = RqStatus.PENDING
+  }
+
+  return cacheData
+}
+
+function addNewCacheAndReturn ( cacheData, query ) {
+  let len = cacheData.push({
+    query,
+    date: null,
+    cache: null,
+    status: 'pending',
+    deferred: null
+  })
+
+  return cacheData[len - 1]
+}
+
+function cacheStatusHandler ( cacheData, deferred ) {
+  let { cache, status } = cacheData
+
+  if ( status === RqStatus.LOADING ) {
+    return cacheData.deferred
+  }
+
+  if ( status === RqStatus.SUCCESS ) {
+    deferred.resolveWith( deferred, [ cache ] )
     return deferred
   }
 
-  function getLocalCacheByUrl (url, query) {
-    let cacheData = localCache[url]
+  if ( status === RqStatus.ERROR || status === RqStatus.FAIL ) {
+    deferred.rejectWith( deferred, [ cache ] )
+    return deferred
+  }
+}
 
-    if (cacheData && Array.isArray(cacheData)) {
-      let matchCache = cacheData.filter(cache => {
-        return deepEquals(cache.query, query)
-      })
-
-      if (matchCache.length) {
-        return matchCache[0]
-      } else {
-        return addNewCacheAndReturn(cacheData, query)
-      }
-    } else {
-      cacheData = localCache[url] = []
-      return addNewCacheAndReturn(cacheData, query)
+function extendOpts ( url, data, options, deferred, needCache, cacheData ) {
+  return $.extend({
+    url,
+    data,
+    type: 'post',
+    dataType: 'json',
+    xhrFields: {
+      withCredentials: true
+    },
+    success ( res, status, xhr ) {
+      ajaxSuccCb( deferred, res, status, xhr, needCache, cacheData )
+    },
+    error (xhr) {
+      ajaxFailCb( deferred, url, xhr, needCache, cacheData )
     }
+  }, options)
+}
+
+function ajaxSuccCb ( deferred, res, status, xhr, needCache, cacheData ) {
+  const errorMsg = '操作失败，请稍后重试。'
+
+  if ( !util.isObject( res ) ) return console.log( errorMsg )
+
+  let resData = null
+  let requestStatus = null
+
+  if ( res.code === 200 ) {
+    deferred.resolveWith( xhr, [ res.result, res ] )
+
+    resData = res.result
+    requestStatus = RqStatus.SUCCESS
+
+    // 成功才记录时间
+    cacheData.date = new Date()
+  } else {
+    let msg = res.msg || errorMsg
+    console.log( msg )
+
+    deferred.rejectWith( xhr, [ res ] )
+
+    resData = msg
+    requestStatus = RqStatus.ERROR
   }
 
-  function addNewCacheAndReturn (cacheData, data) {
-    let len = cacheData.length
-
-    let defaultCache = {
-      query: data,
-      status: 'pending',
-      cache: null,
-      deferred: null
-    }
-
-    cacheData.push(defaultCache)
-
-    return cacheData[len]
+  if ( needCache ) {
+    cacheData.cache = resData
+    cacheData.status = requestStatus
+    cacheData.deferred = null
   }
+}
 
-  function cacheStatusHandler (cacheData, deferred) {
-    // 请求状态 ['pending', 'loading', 'success', 'error', 'fail']
-    let cache = cacheData.cache
-    let status = cacheData.status
+function ajaxFailCb ( deferred, url, xhr, needCache, cacheData ) {
+  let msg = '请求' + url + '失败: ' + xhr.responseText
+  console.error( msg )
 
-    if (status === 'loading') {
-      return cacheData.deferred
-    }
+  deferred.rejectWith( xhr )
 
-    if (status === 'success') {
-      deferred.resolveWith(deferred, [ cache ])
-      return deferred
-    }
-
-    if (status === 'error' || status === 'fail') {
-      deferred.rejectWith(deferred, [ cache ])
-      return deferred
-    }
+  if ( needCache ) {
+    cacheData.cache = msg
+    cacheData.status = RqStatus.FAIL
+    cacheData.deferred = null
   }
+}
 
-  function extendOpts (url, data, options, deferred, needCache, cacheData) {
-    return $.extend({
-      url,
-      data,
-      type: 'post',
-      dataType: 'json',
-      xhrFields: {
-        withCredentials: true
-      },
-      success (res, status, xhr) {
-        ajaxSuccCb(deferred, res, status, xhr, needCache, cacheData)
-      },
-      error (xhr) {
-        ajaxFailCb(deferred, url, xhr, needCache, cacheData)
-      }
-    }, options)
-  }
-
-  function ajaxSuccCb (deferred, res, status, xhr, needCache, cacheData) {
-    const errorMsg = '操作失败，请稍后重试。'
-
-    if (!isObject(res)) return console.log(errorMsg)
-
-    let resData = null
-    let requestStatus = null
-
-    if (res.code === 200) {
-      deferred.resolveWith(xhr, [ res.result, res ])
-
-      resData = res.result
-      requestStatus = 'success'
-    } else {
-      let msg = res.msg || errorMsg
-      console.log(msg)
-
-      deferred.rejectWith(xhr, [ res ])
-
-      resData = msg
-      requestStatus = 'error'
-    }
-
-    if (needCache) {
-      cacheData.cache = resData
-      cacheData.status = requestStatus
-      cacheData.deferred = null
-    }
-  }
-
-  function ajaxFailCb (deferred, url, xhr, needCache, cacheData) {
-    let msg = '请求' + url + '失败: ' + xhr.responseText
-    console.error(msg)
-
-    deferred.rejectWith(xhr)
-
-    if (needCache) {
-      cacheData.cache = msg
-      cacheData.status = 'fail'
-      cacheData.deferred = null
-    }
-  }
-
-  return request
-}))
+export default request
