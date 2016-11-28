@@ -10,37 +10,38 @@ let RqStatus = {
   FAIL: 'fail'
 }
 
-let $ = window.jQuery || null
-let failAlert = window.alert || null
-let errorAlert = window.alert || null
+let $ = window.jQuery || function () {}
+let failAlert = window.alert || function () {}
+let errorAlert = window.alert || function () {}
 let defaultMsg = '操作失败，请稍后重试。'
 
 function request ( url, query, options = {} ) {
   let deferred = $.Deferred()
 
-  let { needCache = false , cacheTime = null } = options
+  let c = {}
+  let needCache = options.cacheData
+  let cacheTime = options.cacheTime
 
   delete options.cacheData
   delete options.cacheTime
 
-  let cacheData = {}
 
   if ( needCache ) {
-    cacheData = getLocalCacheByUrl( url, query )
+    c = getLocalCacheByQuery( url, query )
 
     if ( cacheTime ) {
-      cacheData = resetStatusByCompareCacheTime( cacheData, cacheTime )
+      c = resetStatusByCompareCacheTime( c, cacheTime )
     }
 
-    if ( cacheData.status === RqStatus.PENDING ) {
-      cacheData.status = RqStatus.LOADING
-      cacheData.deferred = deferred
+    if ( c.status === RqStatus.PENDING ) {
+      c.status = RqStatus.LOADING
+      c.deferred = deferred
     } else {
-      return cacheStatusHandler( cacheData, deferred )
+      return cacheStatusHandler( c, deferred )
     }
   }
 
-  $.ajax( extendOpts( url, query, options, deferred, needCache, cacheData ) )
+  $.ajax( extendOpts( url, query, options, deferred, needCache, c ) )
 
   return deferred
 }
@@ -52,7 +53,7 @@ request.install = ( options = {} ) => {
   defaultMsg = options.defaultMsg
 }
 
-function getLocalCacheByUrl ( url, query ) {
+function getLocalCacheByQuery ( url, query ) {
   let cacheData = localCache[ url ]
 
   if ( cacheData && Array.isArray( cacheData ) ) {

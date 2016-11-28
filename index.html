@@ -11,23 +11,7 @@
     <script src="dist/request.min.js"></script>
     <div id="aa">111</div>
     <script>
-      $.extend($.ajax, (function () {
-        let ajax = $.ajax
-        ajax.a = 1
-        return ajax
-      })())
-
-      console.log($.ajax)
-
-      Rq('http://pdc-portal.vis.vip.com/product/queryVendorBrands', { a: 1 }).done(res => {
-        console.log(res)
-      })
-
-      $('#aa').click(function () {
-        Rq('http://pdc-portal.vis.vip.com/product/queryVendorBrands', { a: 1 }, { cacheData: true, cacheTime: 1 }).done(res => {
-          console.log(res)
-        })
-      })
+      console.log(Rq)
     </script>
   </body>
 </html>
