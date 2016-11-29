@@ -47,16 +47,16 @@ function request ( url, query, options = {} ) {
 }
 
 request.install = ( options = {} ) => {
-  $ = options.jQuery
-  failAlert = options.failAlert
-  errorAlert = options.errorAlert
-  defaultMsg = options.defaultMsg
+  $ = options.jQuery || $
+  failAlert = options.failAlert || failAlert
+  errorAlert = options.errorAlert || errorAlert
+  defaultMsg = options.defaultMsg || defaultMsg
 }
 
 function getLocalCacheByQuery ( url, query ) {
   let cacheData = localCache[ url ]
 
-  if ( cacheData && Array.isArray( cacheData ) ) {
+  if ( Array.isArray( cacheData ) ) {
     let match = cacheData.filter(cache => {
       return util.deepEquals( cache.query, query )
     })
@@ -68,24 +68,24 @@ function getLocalCacheByQuery ( url, query ) {
   }
 }
 
-function resetStatusByCompareCacheTime ( cacheData, cacheTime ) {
-  let date = cacheData.date
+function resetStatusByCompareCacheTime ( c, cacheTime ) {
+  let date = c.date
 
-  if ( !date ) return cacheData
+  if ( !date ) return c
 
   // 分钟数
   let interval = parseInt((new Date() - date) / 1000) / 60
 
   if ( interval >= cacheTime ) {
-    cacheData.date = null
-    cacheData.status = RqStatus.PENDING
+    c.date = null
+    c.status = RqStatus.PENDING
   }
 
-  return cacheData
+  return c
 }
 
-function addNewCacheAndReturn ( cacheData, query ) {
-  let len = cacheData.push({
+function addNewCacheAndReturn ( c, query ) {
+  let len = c.push({
     query,
     date: null,
     cache: null,
@@ -93,14 +93,14 @@ function addNewCacheAndReturn ( cacheData, query ) {
     deferred: null
   })
 
-  return cacheData[len - 1]
+  return c[len - 1]
 }
 
-function cacheStatusHandler ( cacheData, deferred ) {
-  let { cache, status } = cacheData
+function cacheStatusHandler ( c, deferred ) {
+  let { cache, status } = c
 
   if ( status === RqStatus.LOADING ) {
-    return cacheData.deferred
+    return c.deferred
   }
 
   if ( status === RqStatus.SUCCESS ) {
@@ -114,7 +114,7 @@ function cacheStatusHandler ( cacheData, deferred ) {
   }
 }
 
-function extendOpts ( url, data, options, deferred, needCache, cacheData ) {
+function extendOpts ( url, data, options, deferred, needCache, c ) {
   return $.extend({
     url,
     data,
@@ -124,15 +124,15 @@ function extendOpts ( url, data, options, deferred, needCache, cacheData ) {
       withCredentials: true
     },
     success ( res, status, xhr ) {
-      ajaxSuccCb( deferred, res, status, xhr, needCache, cacheData )
+      ajaxSuccCb( deferred, res, status, xhr, needCache, c )
     },
     error (xhr) {
-      ajaxFailCb( deferred, url, xhr, needCache, cacheData )
+      ajaxFailCb( deferred, url, xhr, needCache, c )
     }
   }, options)
 }
 
-function ajaxSuccCb ( deferred, res, status, xhr, needCache, cacheData ) {
+function ajaxSuccCb ( deferred, res, status, xhr, needCache, c ) {
   if ( !util.isObject( res ) ) return console.log( errorMsg )
 
   let resData = null
@@ -143,12 +143,12 @@ function ajaxSuccCb ( deferred, res, status, xhr, needCache, cacheData ) {
     requestStatus = RqStatus.SUCCESS
 
     // 记录缓存开始时间
-    cacheData.date = new Date()
+    c.date = new Date()
 
     deferred.resolveWith( xhr, [ resData, res ] )
   } else {
     let msg = res.msg || errorMsg
-    errorAlert( msg )
+    errorAlert && errorAlert( msg )
 
     resData = msg
     requestStatus = RqStatus.ERROR
@@ -157,23 +157,23 @@ function ajaxSuccCb ( deferred, res, status, xhr, needCache, cacheData ) {
   }
 
   if ( needCache ) {
-    cacheData.cache = resData
-    cacheData.status = requestStatus
-    cacheData.deferred = null
+    c.cache = resData
+    c.status = requestStatus
+    c.deferred = null
   }
 }
 
-function ajaxFailCb ( deferred, url, xhr, needCache, cacheData ) {
+function ajaxFailCb ( deferred, url, xhr, needCache, c ) {
   let msg = '请求' + url + '失败: ' + xhr.responseText
   console.error( msg )
-  failAlert( msg )
+  failAlert && failAlert( msg )
 
   deferred.rejectWith( xhr )
 
   if ( needCache ) {
-    cacheData.cache = msg
-    cacheData.status = RqStatus.FAIL
-    cacheData.deferred = null
+    c.cache = msg
+    c.status = RqStatus.FAIL
+    c.deferred = null
   }
 }
 

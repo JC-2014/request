@@ -3,8 +3,8 @@ function isObject ( o ) {
 }
 
 function deepEquals ( a, b ) {
+  let { isArray } = Array
   let { is, keys } = Object
-  let isArray = Array.isArray
 
   let allAreArray = isArray( a ) && isArray( b )
   let allAreObject = isObject( a ) && isObject( b )
